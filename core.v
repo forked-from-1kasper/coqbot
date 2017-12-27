@@ -61,6 +61,11 @@ Fixpoint guard (clauses : list (string * string)) : bool :=
     | (s1, s2) :: xs => if string_dec s1 s2 then guard xs else false
   end.
 
+Notation "'guard' a ; .. ; b 'then' P" :=
+  (if guard (cons a .. (cons b nil) ..) then P
+   else [])
+  (at level 30, no associativity).
+
 Definition handler (input : string) : list IO :=
   match string_to_list input with
     | [command; server] =>
@@ -68,10 +73,9 @@ Definition handler (input : string) : list IO :=
         [IOString ("PONG" !+ server) Delay]
       else []
     | [nick; command; channel; msg] =>
-      if guard [(command, "PRIVMSG"); (msg, ":ping")] then
+      guard (command, "PRIVMSG"); (msg, ":ping") then
         [IOString ("PRIVMSG" !+ channel !+ "pong") Delay;
          IOString ("PRIVMSG" !+ channel !+ "pong‐pong") Delay]
-      else []
     | _ => []
   end.
 
