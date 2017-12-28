@@ -61,11 +61,16 @@ Notation "'guard' a ; .. ; b 'then' P" :=
    else [])
   (at level 30, no associativity).
 
-Definition handler (input : string) : list IO :=
+Definition pingpong (input : string) : list IO :=
   match string_to_list input with
     | [command; server] =>
       guard (command, "PING") then
         [IOString ("PONG" !+ server) Delay]
+    | _ => []
+  end.
+
+Definition pingpongChat (input : string) : list IO :=
+  match string_to_list input with
     | [nick; command; channel; msg] =>
       guard (command, "PRIVMSG"); (msg, ":ping") then
         [IOString ("PRIVMSG" !+ channel !+ "pong") Delay;
@@ -73,17 +78,21 @@ Definition handler (input : string) : list IO :=
     | _ => []
   end.
 
-Theorem ping_correct : ∀ (server : string),
-  [IOString ("PONG" !+ server) Delay] = (handler ("PING" !+ server)).
-  induction server0.
-  simpl.
-  unfold handler.
-  simpl string_to_list.
-  simpl.
-  reflexivity.
-  
-  unfold handler.
-  simpl string_to_list.
+Definition funcs := [pingpong; pingpongChat].
+Definition handler (input : string) :=
+  let fix concat ls :=
+    match ls with
+      | x :: xs => rev_append (rev x) (concat xs)
+      | [] => []
+    end in
+  concat (map (λ f, f input) funcs).
+
+(* coming soon *)
+(* Theorem ping_correct : ∀ (server : string),
+  (Datatypes.length (string_to_list server) = S (S O)) →
+  (pingpong ("PING" !+ server)) = [IOString ("PONG" !+ server) Delay].
+  intros.
+  unfold pingpong. *)
 
 Definition init :=
   IOString "USER coqbot coqbot coqbot coqbot" $
