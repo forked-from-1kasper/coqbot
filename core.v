@@ -48,11 +48,6 @@ Fixpoint string_to_list (s : string) :=
     end
     in support EmptyString s.
 
-Definition init :=
-  IOString "USER coqbot coqbot coqbot coqbot" $
-  IOString "NICK coqbot" $
-  IOString "JOIN #lor" Delay.
-
 Notation " a !+ b " := (a ++ " " ++ b) (at level 40, left associativity).
 
 Fixpoint guard (clauses : list (string * string)) : bool :=
@@ -69,15 +64,31 @@ Notation "'guard' a ; .. ; b 'then' P" :=
 Definition handler (input : string) : list IO :=
   match string_to_list input with
     | [command; server] =>
-      if string_dec command "PING" then
+      guard (command, "PING") then
         [IOString ("PONG" !+ server) Delay]
-      else []
     | [nick; command; channel; msg] =>
       guard (command, "PRIVMSG"); (msg, ":ping") then
         [IOString ("PRIVMSG" !+ channel !+ "pong") Delay;
          IOString ("PRIVMSG" !+ channel !+ "pong‐pong") Delay]
     | _ => []
   end.
+
+Theorem ping_correct : ∀ (server : string),
+  [IOString ("PONG" !+ server) Delay] = (handler ("PING" !+ server)).
+  induction server0.
+  simpl.
+  unfold handler.
+  simpl string_to_list.
+  simpl.
+  reflexivity.
+  
+  unfold handler.
+  simpl string_to_list.
+
+Definition init :=
+  IOString "USER coqbot coqbot coqbot coqbot" $
+  IOString "NICK coqbot" $
+  IOString "JOIN #lor" Delay.
 
 End bot_core.
 
